@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Dados Rítmicos - AulaEnJuego</title>
+    <meta name="description" content="Juego interactivo de dados rítmicos para el aula de música. Genera ritmos aleatorios y practica con tus alumnos.">
+    
+    <!-- 1. Cargar Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- 2. Configurar el Mapa de Importaciones -->
+    <script type="importmap">
+    {
+        "imports": {
+            "react": "https://esm.sh/react@18.2.0",
+            "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
+            "lucide-react": "https://esm.sh/lucide-react@0.344.0"
+        }
+    }
+    </script>
+
+    <!-- 3. Cargar Babel -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <style>
+        body { 
+            background-color: #FFD700; 
+            overflow-x: hidden;
+            touch-action: manipulation;
+        }
+        /* Scroll vertical solo si es necesario */
+        @media (max-height: 600px) {
+            body { overflow-y: auto; }
+        }
+        @media (min-height: 601px) {
+            body { overflow-y: hidden; }
+        }
+
+        /* Animaciones */
+        @keyframes shake {
+            0%, 100% { transform: rotate(-10deg) scale(1.08); }
+            50% { transform: rotate(10deg) scale(0.92); }
+        }
+        @keyframes popIn {
+            0% { transform: scale(0) rotate(-30deg); opacity: 0; }
+            70% { transform: scale(1.1) rotate(5deg); }
+            100% { transform: scale(1) rotate(0deg); opacity: 1; }
+        }
+        /* Scrollbar fina */
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel" data-type="module">
+        import React, { useState, useEffect, useRef } from 'react';
+        import { createRoot } from 'react-dom/client';
+        import { Home, ArrowLeft, RefreshCw, Settings, Check, Music, Sparkles, CheckSquare, Square, Play } from 'lucide-react';
+
+        // --- ICONO DADO PERSONALIZADO ---
+        const CustomDiceIcon = ({ className }) => (
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={className}>
+                <rect x="3" y="3" width="18" height="18" rx="5" ry="5" />
+                <circle cx="8.5" cy="8.5" r="1.5" fill="currentColor" stroke="none"/>
+                <circle cx="15.5" cy="15.5" r="1.5" fill="currentColor" stroke="none"/>
+                <circle cx="15.5" cy="8.5" r="1.5" fill="currentColor" stroke="none"/>
+                <circle cx="8.5" cy="15.5" r="1.5" fill="currentColor" stroke="none"/>
+            </svg>
+        );
+
+        // --- ESTILOS CSS ---
+        const styleSheet = document.createElement("style");
+        styleSheet.innerText = `
+          @keyframes shake {
+            0%, 100% { transform: rotate(-10deg) scale(1.08); }
+            50% { transform: rotate(10deg) scale(0.92); }
+          }
+          @keyframes popIn {
+            0% { transform: scale(0) rotate(-30deg); opacity: 0; }
+            70% { transform: scale(1.1) rotate(5deg); }
+            100% { transform: scale(1) rotate(0deg); opacity: 1; }
+          }
+        `;
+        document.head.appendChild(styleSheet);
+
+        // --- COLECCIÓN DE FIGURAS (SVG) ---
+        const RhythmIcons = {
+            negra: (color) => (
+                <svg viewBox="0 0 400 400" className="w-full h-full" fill={color}>
+                <g>
+                    <rect x="220" y="62" width="21" height="225" rx="6" />
+                    <ellipse cx="183.5" cy="287" rx="57.5" ry="49" />
+                </g>
+                </svg>
+            ),
+            silencioNegra: (color) => (
+                <svg viewBox="0 0 400 400" className="w-full h-full" fill={color}>
+                <path d="M185 368C180.4 369 173 360.6 163 343 152.7 325.1 145.4 309.8 141 297.1 135.7 278.9 136 266.8 142 261 145 256.2 156.6 254.9 177 257 197 262.1 208.7 265.5 212 267 164.6 215.8 142.6 186.1 146 178 145.5 175.5 155.5 157.6 191 128 200.1 120.4 203.7 107 205 95 207.8 68.2 166.9 39.7 173.2 34.3 175.7 31.8 179 31 183 32 192.6 40.1 204.6 53.8 219 73 248.7 108 263.4 126.3 263 129 261.1 139 251.4 151.3 234 166 219.7 180.1 210.3 191.7 205.9 200.9 204 210.6 204.2 219.3 206.3 226.8 207.9 234.5 215.9 248.1 230.2 267.7 250.2 289.5 258.1 301.9 254 305 249.8 307.2 246.2 306.5 245 306 240.9 304.2 235.3 299.6 225 294 210.4 288.8 200.4 286.8 195 288 185.1 291.1 178.8 295.7 176 302 172.8 311.3 173.9 338.2 185 368z"/>
+                </svg>
+            ),
+            corcheas: (color) => (
+                <svg viewBox="0 0 400 400" className="w-full h-full" fill={color}>
+                <g>
+                    <ellipse cx="93" cy="316" rx="46" ry="39" />
+                    <ellipse cx="277" cy="265" rx="46" ry="39" />
+                    <rect x="122" y="136" width="17" height="180" rx="6" />
+                    <rect x="306" y="85" width="17" height="180" rx="6" />
+                    <polygon points="122,100 323,49 323,91 122,142" />
+                </g>
+                </svg>
+            ),
+            blanca: (color) => (
+                <svg viewBox="0 0 400 400" className="w-full h-full">
+                <g>
+                    <ellipse cx="180.5" cy="285" rx="54.5" ry="47" fill="none" stroke={color} strokeWidth="19" />
+                    <rect x="224" y="72" width="21" height="206" rx="4" fill={color} />
+                </g>
+                </svg>
+            ),
+            cuatroSemicorcheas: (color) => (
+                <svg viewBox="0 0 400 400" className="w-full h-full" fill={color}>
+                <g>
+                    <ellipse cx="60" cy="320" rx="38" ry="33" />
+                    <ellipse cx="150" cy="280" rx="38" ry="33" />
+                    <ellipse cx="240" cy="240" rx="38" ry="33" />
+                    <ellipse cx="330" cy="200" rx="38" ry="33" />
+                    <rect x="82" y="160" width="17" height="160" rx="4" />
+                    <rect x="172" y="120" width="17" height="160" rx="4" />
+                    <rect x="262" y="80" width="17" height="160" rx="4" />
+                    <rect x="352" y="40" width="17" height="160" rx="4" />
+                    <polygon points="82,160 355,40 355,70 82,190" />
+                    <polygon points="82,215 355,95 355,115 82,235" />
+                </g>
+                </svg>
+            ),
+            negraPuntilloCorchea: (color) => (
+                <svg viewBox="0 0 400 400" className="w-full h-full" fill={color}>
+                <g>
+                    <ellipse cx="75" cy="273" rx="46" ry="39" />
+                    <rect x="104" y="93" width="17" height="180" rx="4" />
+                    <circle cx="152" cy="265" r="14" />
+                    <ellipse cx="259" cy="270" rx="46" ry="39" />
+                    <rect x="288" y="90" width="17" height="180" rx="4" />
+                    <path d="M297 100 C297 100 321 103 348 142 C375 181 346 217 346 217" fill="none" stroke={color} strokeWidth="19" strokeLinecap="round" />
+                </g>
+                </svg>
+            ),
+            corcheaPuntilloSemicorchea: (color) => (
+                <svg viewBox="0 0 400 400" className="w-full h-full" fill={color}>
+                <g>
+                    <ellipse cx="93" cy="316" rx="46" ry="39" />
+                    <ellipse cx="277" cy="265" rx="46" ry="39" />
+                    <rect x="122" y="136" width="17" height="180" rx="4" />
+                    <rect x="306" y="85" width="17" height="180" rx="4" />
+                    <polygon points="122,100 323,49 323,91 122,142" />
+                    <circle cx="167" cy="300" r="14" />
+                    <line x1="238" y1="154" x2="310" y2="135" stroke={color} strokeWidth="19" />
+                </g>
+                </svg>
+            ),
+            corcheaDosSemicorcheas: (color) => (
+                <svg viewBox="0 0 400 400" className="w-full h-full" fill={color}>
+                <g>
+                    <ellipse cx="64" cy="282" rx="46" ry="39" />
+                    <ellipse cx="200" cy="279" rx="46" ry="39" />
+                    <ellipse cx="321" cy="279" rx="46" ry="39" />
+                    <rect x="93" y="99" width="17" height="183" rx="4" />
+                    <rect x="229" y="99" width="17" height="180" rx="4" />
+                    <rect x="350" y="99" width="17" height="180" rx="4" />
+                    <rect x="93" y="99" width="274" height="35" />
+                    <rect x="229" y="160" width="138" height="17" />
+                </g>
+                </svg>
+            ),
+            tresillo: (color) => (
+                <svg viewBox="0 0 400 400" className="w-full h-full" fill={color}>
+                <g>
+                    <ellipse cx="64" cy="317" rx="46" ry="39" />
+                    <ellipse cx="200" cy="314" rx="46" ry="39" />
+                    <ellipse cx="321" cy="314" rx="46" ry="39" />
+                    <rect x="93" y="134" width="17" height="183" rx="4" />
+                    <rect x="229" y="134" width="17" height="180" rx="4" />
+                    <rect x="350" y="134" width="17" height="180" rx="4" />
+                    <rect x="93" y="134" width="274" height="30" />
+                    <text x="225" y="122" fontFamily="sans-serif" fontSize="74" fontWeight="bold" textAnchor="middle" fill={color}>3</text>
+                    <path d="M90 95 Q225 20 357 95" fill="none" stroke={color} strokeWidth="10" strokeLinecap="round" />
+                </g>
+                </svg>
+            ),
+            sincopa: (color) => (
+                <svg viewBox="0 0 400 400" className="w-full h-full" fill={color}>
+                <g>
+                    <ellipse cx="45" cy="282" rx="46" ry="39" />
+                    <rect x="74" y="99" width="17" height="183" rx="4" />
+                    <path d="M81 100 C81 100 105 103 132 142 C159 181 130 217 130 217" fill="none" stroke={color} strokeWidth="19" strokeLinecap="round" />
+                    <ellipse cx="170" cy="279" rx="46" ry="39" />
+                    <rect x="199" y="99" width="17" height="180" rx="4" />
+                    <ellipse cx="293" cy="282" rx="46" ry="39" />
+                    <rect x="322" y="99" width="17" height="183" rx="4" />
+                    <path d="M329 100 C329 100 353 103 380 142 C407 181 378 217 378 217" fill="none" stroke={color} strokeWidth="19" strokeLinecap="round" />
+                </g>
+                </svg>
+            ),
+            silencioCorcheaCorchea: (color) => (
+                <svg viewBox="0 0 400 400" className="w-full h-full" fill={color}>
+                <g>
+                    <circle cx="110" cy="150" r="16" />
+                    <path d="M 105 155 Q 148 205 178 135 L 128 280" fill="none" stroke={color} strokeWidth="19" strokeLinecap="round" strokeLinejoin="round" />
+                    <ellipse cx="260" cy="282" rx="46" ry="39" />
+                    <rect x="289" y="99" width="17" height="183" rx="4" />
+                    <path d="M296 100 C296 100 320 103 347 142 C374 181 345 217 345 217" fill="none" stroke={color} strokeWidth="19" strokeLinecap="round" />
+                </g>
+                </svg>
+            )
+        };
+
+        const ORDERED_SYMBOLS = [
+            'negra', 'silencioNegra', 'corcheas', 'blanca', 'cuatroSemicorcheas',
+            'tresillo', 'negraPuntilloCorchea', 'corcheaPuntilloSemicorchea',
+            'sincopa', 'silencioCorcheaCorchea', 'corcheaDosSemicorcheas'
+        ];
+
+        const DICE_OPTIONS = [1, 2, 4, 8, 16, 32];
+
+        function MusicalDiceGame() {
+            const [screen, setScreen] = useState('config'); 
+            const [selectedSymbols, setSelectedSymbols] = useState(['negra', 'silencioNegra']); 
+            const [diceCount, setDiceCount] = useState(4);
+            const [currentRoll, setCurrentRoll] = useState([]);
+            const [isRolling, setIsRolling] = useState(false);
+            
+            const intervalRef = useRef(null);
+
+            const toggleSymbol = (key) => {
+                setSelectedSymbols(prev => {
+                if (prev.includes(key)) {
+                    if (prev.length === 1) return prev;
+                    return prev.filter(s => s !== key);
+                } else {
+                    return [...prev, key];
+                }
+                });
+            };
+            
+            const selectAll = () => setSelectedSymbols(ORDERED_SYMBOLS);
+            const selectNone = () => setSelectedSymbols([]);
+
+            const startGame = () => {
+                if (selectedSymbols.length === 0) return;
+                rollDice();
+                setScreen('game');
+            };
+
+            const rollDice = () => {
+                if (isRolling || selectedSymbols.length === 0) return;
+                setIsRolling(true);
+
+                let iterations = 0;
+                if (intervalRef.current) clearInterval(intervalRef.current);
+
+                intervalRef.current = setInterval(() => {
+                const tempRoll = Array.from({ length: diceCount }, () => {
+                    const randomIndex = Math.floor(Math.random() * selectedSymbols.length);
+                    return selectedSymbols[randomIndex];
+                });
+                setCurrentRoll(tempRoll);
+                iterations++;
+
+                if (iterations >= 12) {
+                    clearInterval(intervalRef.current);
+                    setIsRolling(false);
+                }
+                }, 70); 
+            };
+
+            useEffect(() => {
+                return () => clearInterval(intervalRef.current);
+            }, []);
+
+            const renderIcon = (symbolName, color) => {
+                const IconFn = RhythmIcons[symbolName];
+                return IconFn ? IconFn(color) : null;
+            };
+
+            // --- PANTALLA CONFIGURACIÓN ---
+            if (screen === 'config') {
+                return (
+                <div className="min-h-screen w-full bg-[#FFD700] font-sans flex flex-col items-center p-2 md:p-4 text-gray-800">
+                    
+                    {/* CONTENEDOR SUPERIOR */}
+                    <div className="w-full max-w-7xl flex flex-col lg:flex-row gap-2 lg:gap-4 items-stretch mb-2 flex-1 min-h-0">
+                        
+                        {/* COLUMNA IZQUIERDA: MARCA (50%) */}
+                        <div className="w-full lg:w-1/2 flex flex-col justify-center animate-[popIn_0.5s_ease-out] gap-2 py-2 px-2 md:px-0">
+                            
+                            {/* CABECERA MÓVIL */}
+                            <div className="lg:hidden flex flex-row items-center justify-between w-full gap-4">
+                                <div className="flex-1 text-left leading-[1.0]">
+                                    <h1 className="text-[12vw] sm:text-[10vw] font-black text-blue-600 tracking-tighter drop-shadow-sm uppercase">
+                                        DADOS
+                                    </h1>
+                                    <h1 className="text-[10vw] sm:text-[8vw] font-black text-blue-600 tracking-tighter drop-shadow-sm uppercase">
+                                        RÍTMICOS
+                                    </h1>
+                                </div>
+                                <div className="flex-none flex flex-col items-center justify-center">
+                                    <a href="https://aulaenjuego.com/" target="_blank" rel="noopener noreferrer" className="hover:scale-105 transition-transform duration-300 block">
+                                        <img 
+                                            src="https://raw.githubusercontent.com/maestroseb/musica/refs/heads/main/aulaenjuego.png" 
+                                            alt="AulaEnJuego" 
+                                            className="h-16 sm:h-24 object-contain drop-shadow-xl"
+                                        />
+                                    </a>
+                                    <p className="hidden sm:block text-blue-700 font-bold tracking-widest text-xs opacity-80 uppercase mt-2">aulaenjuego.com</p>
+                                </div>
+                            </div>
+
+                            {/* DISEÑO ESCRITORIO */}
+                            <div className="hidden lg:flex w-full flex-col justify-between items-start h-full py-4 gap-8">
+                                
+                                {/* Título */}
+                                <div className="flex-1 lg:w-full text-left leading-[1.0] flex flex-col justify-center">
+                                    <h1 className="text-[9rem] xl:text-[10rem] font-black text-blue-600 tracking-tighter drop-shadow-sm uppercase">
+                                        DADOS
+                                    </h1>
+                                    <h1 className="text-[7rem] xl:text-[8.5rem] font-black text-blue-600 tracking-tighter drop-shadow-sm uppercase">
+                                        RÍTMICOS
+                                    </h1>
+                                </div>
+
+                                {/* Fila Inferior */}
+                                <div className="flex flex-row items-center gap-8 w-full">
+                                    {/* Logo */}
+                                    <div className="flex-none flex flex-col items-center lg:items-start justify-center">
+                                        <a href="https://aulaenjuego.com/" target="_blank" rel="noopener noreferrer" className="hover:scale-105 transition-transform duration-300 block">
+                                            <img 
+                                                src="https://raw.githubusercontent.com/maestroseb/musica/refs/heads/main/aulaenjuego.png" 
+                                                alt="AulaEnJuego" 
+                                                className="h-32 lg:h-40 xl:h-55 object-contain drop-shadow-xl"
+                                            />
+                                        </a>
+                                        <p className="text-blue-700 font-bold tracking-widest text-sm opacity-80 uppercase mt-2">aulaenjuego.com</p>
+                                    </div>
+
+                                    {/* TEXTO DESCRIPTIVO */}
+                                    <div className="flex-1 text-blue-900/80 text-lg xl:text-xl font-bold leading-snug">
+                                        <p className="mb-2">Genera ejercicios rítmicos aleatorios para tu aula de música.</p>
+                                        <p className="mb-2">Personaliza las figuras activas y ajusta la dificultad con la cantidad de dados.</p>
+                                        <p className="text-blue-600">¡Cada tirada es diferente!</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* PANEL FIGURAS */}
+                        <div className="flex-1 lg:w-1/2 bg-white rounded-[1.5rem] shadow-xl p-3 lg:p-4 flex flex-col border-b-4 md:border-b-8 border-gray-200 min-h-[200px]">
+                            <div className="flex justify-between items-center mb-2 flex-none">
+                                <h2 className="text-lg md:text-xl font-black text-gray-700 flex items-center gap-2 uppercase tracking-wide">
+                                    <Music size={24} className="text-blue-500" /> FIGURAS
+                                </h2>
+                                <div className="flex gap-2">
+                                        <button onClick={selectAll} className="flex items-center gap-1 px-2 py-1 md:px-3 md:py-1.5 rounded-lg bg-green-100 text-green-700 font-bold text-[10px] hover:bg-green-200 border border-green-200 transition">
+                                        <CheckSquare size={14}/> Todas
+                                    </button>
+                                    <button onClick={selectNone} className="flex items-center gap-1 px-2 py-1 md:px-3 md:py-1.5 rounded-lg bg-red-100 text-red-700 font-bold text-[10px] hover:bg-red-200 border border-red-200 transition">
+                                        <Square size={14}/> Ninguna
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Grid de Iconos */}
+                            <div className="flex-1 grid grid-cols-4 gap-2 lg:gap-3 content-center overflow-hidden">
+                                {ORDERED_SYMBOLS.map((key) => {
+                                    const isSelected = selectedSymbols.includes(key);
+                                    return (
+                                        <button
+                                        key={key}
+                                        onClick={() => toggleSymbol(key)}
+                                        className={`
+                                            relative group flex items-center justify-center rounded-xl transition-all duration-150 aspect-square w-full p-1
+                                            ${isSelected 
+                                                ? 'bg-blue-100 shadow-[inset_0_2px_4px_rgba(0,0,0,0.1)] border-2 border-blue-400' 
+                                                : 'bg-white border-2 border-gray-100 hover:border-gray-300 shadow-sm hover:shadow-md'}
+                                        `}
+                                        >
+                                            <div className={`w-[85%] h-[85%] transition-transform duration-200 ${isSelected ? 'scale-95 text-blue-800' : 'scale-100 text-gray-400 group-hover:text-gray-500'}`}>
+                                                {renderIcon(key, 'currentColor')}
+                                            </div>
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* BARRA INFERIOR */}
+                    <div className="w-full max-w-7xl flex flex-col md:flex-row gap-2 md:gap-3 h-auto lg:h-32 pb-1 shrink-0 mt-0">
+                        {/* Selector Cantidad */}
+                        <div className="flex-[2] bg-white rounded-2xl shadow-lg border-b-4 border-gray-200 flex flex-col p-3 md:p-4 justify-center">
+                            
+                            <div className="flex items-center mb-1 md:mb-2 flex-none">
+                                <h2 className="text-lg md:text-xl font-black text-gray-700 flex items-center gap-2 uppercase tracking-wide">
+                                    <Settings size={24} className="text-purple-500" /> CANTIDAD DE DADOS
+                                </h2>
+                            </div>
+                            
+                            <div className="flex gap-2 h-full w-full items-center flex-1">
+                                    {DICE_OPTIONS.map((num) => (
+                                    <button
+                                        key={num}
+                                        onClick={() => setDiceCount(num)}
+                                        className={`
+                                        flex-1 h-12 md:h-full rounded-xl font-black text-lg md:text-3xl transition-all duration-200 flex items-center justify-center border-b-4 active:border-b-0 active:translate-y-1
+                                        ${diceCount === num 
+                                            ? 'bg-purple-600 border-purple-800 text-white shadow-md' 
+                                            : 'bg-gray-50 border-gray-200 text-gray-400 hover:bg-gray-100'}
+                                        ${num === 32 ? 'hidden sm:flex' : 'flex'}
+                                        `}
+                                    >
+                                        {num}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Botón JUGAR */}
+                        <button 
+                            onClick={startGame}
+                            disabled={selectedSymbols.length === 0}
+                            className={`
+                                flex-1 bg-green-500 hover:bg-green-600 text-white rounded-2xl shadow-xl border-b-8 border-green-700 active:border-b-0 active:translate-y-2 transition-all flex flex-col items-center justify-center gap-2 p-3 min-h-[80px] md:min-h-0
+                                ${selectedSymbols.length === 0 ? 'opacity-50 grayscale cursor-not-allowed' : 'hover:scale-[1.02]'}
+                            `}
+                        >
+                            <div className="flex flex-row items-center gap-3">
+                                <CustomDiceIcon className={`w-8 h-8 md:w-10 md:h-10 hidden lg:block ${selectedSymbols.length > 0 ? 'animate-[spin_3s_linear_infinite_paused] group-hover:animate-spin' : ''}`} />
+                                <span className="text-2xl md:text-4xl font-black italic tracking-wide">¡JUGAR!</span>
+                            </div>
+                        </button>
+                    </div>
+
+                    {/* PIE DE PÁGINA (Footer) */}
+                    <div className="w-full text-center py-2 text-xs md:text-sm font-bold text-blue-800/60 mt-2">
+                        Creado por <a href="https://x.com/maestro_seb?lang=es" target="_blank" rel="noopener noreferrer" className="hover:text-blue-900 underline decoration-blue-800/40">maestroseb</a> 🖤 con ayuda de Gemini y Claude
+                    </div>
+                </div>
+                );
+            }
+
+            // --- PANTALLA JUEGO ---
+            if (screen === 'game') {
+                // CONFIGURACIÓN DE GRID EXACTA PARA CADA MODO
+                let gridClass = '';
+                let paddingClass = 'p-2'; 
+
+                // Modo 1 dado: 1 Columna, Centrado
+                if (diceCount === 1) {
+                    gridClass = 'grid-cols-1 w-[50vmin]';
+                } 
+                // Modo 2 dados: 2 Columnas
+                else if (diceCount === 2) {
+                    gridClass = 'grid-cols-2 w-[80vmin]';
+                } 
+                // Modo 4 dados: 2x2 en móvil, 1x4 en PC (si se quiere fila)
+                // O mejor: Mobile: grid-cols-2, PC: grid-cols-4
+                else if (diceCount === 4) {
+                    gridClass = 'grid-cols-2 md:grid-cols-4 w-full max-w-[90vw]';
+                } 
+                // Modo 8 dados: Movil 2 filas (4col), PC 1 fila (8col)
+                else if (diceCount === 8) {
+                    gridClass = 'grid-cols-4 md:grid-cols-8 w-full max-w-[95vw]';
+                } 
+                // Modo 16 dados: Movil 4 filas (4col), PC 2 filas (8col)
+                else if (diceCount === 16) {
+                    gridClass = 'grid-cols-4 md:grid-cols-8 w-full max-w-[95vw]';
+                    paddingClass = 'p-1';
+                } 
+                // Modo 32 dados: Movil 8 filas (4col), PC 4 filas (8col)
+                else if (diceCount === 32) {
+                    gridClass = 'grid-cols-4 md:grid-cols-8 w-full max-w-[95vw]';
+                    paddingClass = 'p-0.5';
+                }
+
+                return (
+                <div className="h-screen w-full bg-slate-100 flex flex-col font-sans overflow-hidden">
+                    <div className="flex-none bg-white px-4 py-3 shadow-sm border-b border-gray-200 flex justify-between items-center z-20 relative">
+                        <div className="flex items-center gap-3">
+                            <button 
+                                onClick={() => setScreen('config')} 
+                                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gray-100 text-gray-600 font-bold hover:bg-gray-200 transition-colors border-b-4 border-gray-300 active:border-b-0 active:translate-y-1"
+                            >
+                                <ArrowLeft size={20} /> 
+                                <span className="hidden md:inline">Menú</span>
+                            </button>
+                            <div className="hidden md:block bg-purple-100 text-purple-700 px-3 py-1 rounded-lg font-bold text-sm border border-purple-200">
+                                {diceCount} DADOS
+                            </div>
+                        </div>
+
+                        <h1 className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 text-xl md:text-3xl font-black text-blue-600 tracking-tight uppercase hidden sm:block whitespace-nowrap">
+                            DADOS RÍTMICOS
+                        </h1>
+
+                        <a href="https://aulaenjuego.com/" target="_blank" rel="noopener noreferrer" className="hover:opacity-80 transition-opacity">
+                            <img 
+                                src="https://raw.githubusercontent.com/maestroseb/musica/refs/heads/main/aulaenjuego.png" 
+                                alt="AulaEnJuego" 
+                                className="h-10 md:h-12 object-contain"
+                            />
+                        </a>
+                    </div>
+
+                    <div className="flex-1 w-full h-full flex flex-col items-center justify-center p-4 bg-slate-100 relative overflow-hidden">
+                        
+                        {/* GRID DE JUEGO - Gap consistente */}
+                        <div className={`grid ${gridClass} gap-2 md:gap-3 mb-4 content-center justify-center`}>
+                            {currentRoll.map((symbol, idx) => (
+                                <div 
+                                    key={idx} 
+                                    className="flex items-center justify-center relative overflow-hidden w-full aspect-square"
+                                    style={{
+                                    background: '#ffffff',
+                                    borderRadius: '16%',
+                                    boxShadow: `
+                                        0 6px 0px #e2e8f0, 
+                                        0 8px 8px rgba(0,0,0,0.1)
+                                    `,
+                                    border: '2px solid #f1f5f9',
+                                    animationName: isRolling ? 'shake' : 'popIn',
+                                    animationDuration: isRolling ? '0.08s' : '0.35s',
+                                    animationIterationCount: isRolling ? 'infinite' : '1',
+                                    animationDelay: isRolling ? '0s' : `${idx * 0.02}s`,
+                                    animationFillMode: 'both',
+                                    animationTimingFunction: 'ease-out'
+                                    }}
+                                >
+                                    <div className={`w-[90%] h-[90%] text-gray-800 flex items-center justify-center ${paddingClass}`}>
+                                    {renderIcon(symbol, '#1e293b')}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+
+                        <button 
+                            onClick={rollDice}
+                            disabled={isRolling}
+                            className={`
+                                bg-blue-500 hover:bg-blue-600 text-white text-lg font-bold py-3 px-12 rounded-2xl shadow-lg border-b-4 border-blue-700 transition flex items-center gap-3
+                                ${isRolling ? 'opacity-90 scale-95' : 'hover:scale-[1.02] active:scale-95 active:border-b-0 active:translate-y-1'}
+                            `}
+                        >
+                            <RefreshCw className={isRolling ? "animate-spin" : ""} size={24} strokeWidth={3} />
+                            {isRolling ? '...' : 'LANZAR'}
+                        </button>
+
+                    </div>
+                </div>
+                );
+            }
+
+            return null;
+        }
+
+        const root = createRoot(document.getElementById('root'));
+        root.render(<MusicalDiceGame />);
+    </script>
+</body>
+</html>
