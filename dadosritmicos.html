@@ -26,14 +26,14 @@
     <style>
         body { 
             background-color: #FFD700; 
+            /* Por defecto permitimos scroll en vertical para evitar cortes en móviles */
+            overflow-y: auto; 
             overflow-x: hidden;
             touch-action: manipulation;
         }
-        /* Scroll vertical solo si es necesario */
-        @media (max-height: 600px) {
-            body { overflow-y: auto; }
-        }
-        @media (min-height: 601px) {
+
+        /* Solo bloqueamos el scroll si la pantalla es suficientemente grande (Escritorio) */
+        @media (min-width: 1024px) and (min-height: 768px) {
             body { overflow-y: hidden; }
         }
 
@@ -60,7 +60,7 @@
     <script type="text/babel" data-type="module">
         import React, { useState, useEffect, useRef } from 'react';
         import { createRoot } from 'react-dom/client';
-        import { Home, ArrowLeft, RefreshCw, Settings, Check, Music, Sparkles, CheckSquare, Square, Play } from 'lucide-react';
+        import { Home, ArrowLeft, RefreshCw, Settings, Check, Music, Sparkles, CheckSquare, Square, Play, Dice5 } from 'lucide-react';
 
         // --- ICONO DADO PERSONALIZADO ---
         const CustomDiceIcon = ({ className }) => (
@@ -290,7 +290,8 @@
             // --- PANTALLA CONFIGURACIÓN ---
             if (screen === 'config') {
                 return (
-                <div className="min-h-screen w-full bg-[#FFD700] font-sans flex flex-col items-center p-2 md:p-4 text-gray-800">
+                // Añadido pb-safe para móviles con barra inferior o poco espacio
+                <div className="min-h-screen w-full bg-[#FFD700] font-sans flex flex-col items-center p-2 md:p-4 text-gray-800 pb-8 md:pb-4">
                     
                     {/* CONTENEDOR SUPERIOR */}
                     <div className="w-full max-w-7xl flex flex-col lg:flex-row gap-2 lg:gap-4 items-stretch mb-2 flex-1 min-h-0">
@@ -316,7 +317,7 @@
                                             className="h-16 sm:h-24 object-contain drop-shadow-xl"
                                         />
                                     </a>
-                                    <p className="hidden sm:block text-blue-700 font-bold tracking-widest text-xs opacity-80 uppercase mt-2">AulaEnJuego.com</p>
+                                    <p className="hidden sm:block text-blue-700 font-bold tracking-widest text-xs opacity-80 uppercase mt-2">aulaenjuego.com</p>
                                 </div>
                             </div>
 
@@ -344,7 +345,7 @@
                                                 className="h-32 lg:h-40 xl:h-55 object-contain drop-shadow-xl"
                                             />
                                         </a>
-                                        <p className="text-blue-700 font-bold tracking-widest text-sm opacity-80 uppercase mt-2">https://aulaenjuego.com</p>
+                                        <p className="text-blue-700 font-bold tracking-widest text-sm opacity-80 uppercase mt-2">aulaenjuego.com</p>
                                     </div>
 
                                     {/* TEXTO DESCRIPTIVO */}
@@ -403,6 +404,7 @@
                         {/* Selector Cantidad */}
                         <div className="flex-[2] bg-white rounded-2xl shadow-lg border-b-4 border-gray-200 flex flex-col p-3 md:p-4 justify-center">
                             
+                            {/* Header Cantidad Integrado */}
                             <div className="flex items-center mb-1 md:mb-2 flex-none">
                                 <h2 className="text-lg md:text-xl font-black text-gray-700 flex items-center gap-2 uppercase tracking-wide">
                                     <Settings size={24} className="text-purple-500" /> CANTIDAD DE DADOS
@@ -446,7 +448,7 @@
 
                     {/* PIE DE PÁGINA (Footer) */}
                     <div className="w-full text-center py-2 text-xs md:text-sm font-bold text-blue-800/60 mt-2">
-                        Creado por <a href="https://x.com/maestro_seb?lang=es" target="_blank" rel="noopener noreferrer" className="hover:text-blue-900 underline decoration-blue-800/40">maestroseb</a> 💙 con ayuda de Gemini y Claude
+                        Creado por <a href="https://x.com/maestro_seb?lang=es" target="_blank" rel="noopener noreferrer" className="hover:text-blue-900 underline decoration-blue-800/40">maestroseb</a> 🖤 con ayuda de Gemini y Claude
                     </div>
                 </div>
                 );
