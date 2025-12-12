@@ -26,14 +26,14 @@
     <style>
         body { 
             background-color: #FFD700; 
-            /* Por defecto permitimos scroll en vertical para evitar cortes en móviles */
-            overflow-y: auto; 
             overflow-x: hidden;
             touch-action: manipulation;
         }
-
-        /* Solo bloqueamos el scroll si la pantalla es suficientemente grande (Escritorio) */
-        @media (min-width: 1024px) and (min-height: 768px) {
+        /* Scroll vertical solo si es necesario */
+        @media (max-height: 600px) {
+            body { overflow-y: auto; }
+        }
+        @media (min-height: 601px) {
             body { overflow-y: hidden; }
         }
 
@@ -459,6 +459,8 @@
                 // CONFIGURACIÓN DE GRID EXACTA PARA CADA MODO
                 let gridClass = '';
                 let paddingClass = 'p-2'; 
+                // Añadimos constraint de max-width para 32 y 16 para evitar que la altura se salga
+                let containerMaxWidth = 'w-full max-w-[95vw]'; 
 
                 // Modo 1 dado: 1 Columna, Centrado
                 if (diceCount === 1) {
@@ -479,12 +481,14 @@
                 } 
                 // Modo 16 dados: Movil 4 filas (4col), PC 2 filas (8col)
                 else if (diceCount === 16) {
-                    gridClass = 'grid-cols-4 md:grid-cols-8 w-full max-w-[95vw]';
+                    gridClass = 'grid-cols-4 md:grid-cols-8';
+                    containerMaxWidth = 'w-full max-w-[80vw]'; // Restringimos ancho para que no sea tan alto
                     paddingClass = 'p-1';
                 } 
                 // Modo 32 dados: Movil 8 filas (4col), PC 4 filas (8col)
                 else if (diceCount === 32) {
-                    gridClass = 'grid-cols-4 md:grid-cols-8 w-full max-w-[95vw]';
+                    gridClass = 'grid-cols-4 md:grid-cols-8';
+                    containerMaxWidth = 'w-full max-w-[65vw]'; // Muy restringido para que 4 filas quepan bien
                     paddingClass = 'p-0.5';
                 }
 
@@ -520,7 +524,7 @@
                     <div className="flex-1 w-full h-full flex flex-col items-center justify-center p-4 bg-slate-100 relative overflow-hidden">
                         
                         {/* GRID DE JUEGO - Gap consistente */}
-                        <div className={`grid ${gridClass} gap-2 md:gap-3 mb-4 content-center justify-center`}>
+                        <div className={`grid ${gridClass} gap-2 md:gap-3 mb-4 content-center justify-center ${containerMaxWidth}`}>
                             {currentRoll.map((symbol, idx) => (
                                 <div 
                                     key={idx} 
