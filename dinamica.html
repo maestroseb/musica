@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Matices de Carácter Musical</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Fuente Serif para simular notación musical -->
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@1,400;1,700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            transition: background-color 0.4s ease, color 0.4s ease;
+        }
+        
+        /* Estilos personalizados para el slider (range input) */
+        input[type=range] {
+            -webkit-appearance: none;
+            width: 100%;
+            background: transparent;
+            position: relative;
+            z-index: 20; /* Encima de las muescas */
+            height: 32px; /* Altura fija para alinear mejor */
+            margin: 0;
+            cursor: pointer;
+        }
+
+        /* Thumb (La bola) */
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 32px;
+            width: 32px;
+            border-radius: 50%;
+            background: #ffffff;
+            margin-top: -12px; /* (8px track / 2) - (32px thumb / 2) */
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            border: 2px solid currentColor;
+            transition: transform 0.1s, background-color 0.2s;
+        }
+
+        input[type=range]::-webkit-slider-thumb:hover {
+            transform: scale(1.1);
+        }
+
+        /* Track (El riel) */
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 4px;
+        }
+
+        input[type=range]:focus {
+            outline: none;
+        }
+
+        /* Notación musical */
+        .musical-text {
+            font-family: 'Playfair Display', serif;
+            font-style: italic;
+            font-weight: 700;
+            line-height: 1; /* Evita altura de línea extra que cause desalineación */
+        }
+
+        /* Estilo para las etiquetas clicables */
+        .tick-label {
+            cursor: pointer;
+            transition: color 0.2s, transform 0.2s;
+            user-select: none;
+        }
+        .tick-label:hover {
+            color: white;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body class="h-screen w-full flex flex-col items-center justify-center overflow-hidden relative">
+
+    <!-- Fondo dinámico -->
+    <div id="app-bg" class="absolute inset-0 -z-10 transition-colors duration-500 ease-out"></div>
+
+    <!-- Contenedor Principal -->
+    <main class="w-full max-w-md px-6 py-8 md:max-w-2xl text-center relative z-10 flex flex-col h-full justify-center">
+        
+        <h1 class="text-white/90 text-sm md:text-base font-semibold tracking-widest uppercase mb-4 md:mb-8">Dinámica Musical</h1>
+
+        <!-- Visualizador Central -->
+        <!-- Aumenté la altura base y usé gap-8 para asegurar separación vertical -->
+        <div class="mb-6 md:mb-10 relative h-64 md:h-72 flex flex-col items-center justify-center shrink-0 gap-6">
+            
+            <!-- Círculo de fondo -->
+            <div id="visual-circle" class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-48 h-48 md:w-64 md:h-64 rounded-full bg-white/10 blur-xl transition-all duration-500 pointer-events-none"></div>
+            
+            <!-- Contenedor del Símbolo para centrado y escala -->
+            <div class="relative flex items-center justify-center h-32 md:h-40 w-full">
+                <!-- Símbolo Musical -->
+                <div id="dynamic-symbol" class="musical-text text-8xl md:text-9xl text-white drop-shadow-lg transition-transform duration-300 transform select-none origin-center">
+                    mp
+                </div>
+            </div>
+            
+            <!-- Contenedor de Textos (Separado del símbolo para evitar superposición) -->
+            <div class="flex flex-col items-center z-10">
+                <!-- Nombre -->
+                <div id="dynamic-name" class="text-2xl md:text-3xl font-bold text-white tracking-wide transition-opacity duration-300">
+                    Mezzo-piano
+                </div>
+
+                <!-- Descripción -->
+                <div id="dynamic-desc" class="mt-2 text-white/80 text-lg font-light">
+                    Moderadamente suave
+                </div>
+            </div>
+        </div>
+
+        <!-- Barras de Volumen -->
+        <div class="flex justify-center items-end gap-1 h-12 mb-8 md:mb-12 w-full px-10 opacity-80 shrink-0">
+            <div class="bar w-2 bg-white rounded-full transition-all duration-300" style="height: 10%"></div>
+            <div class="bar w-2 bg-white rounded-full transition-all duration-300" style="height: 20%"></div>
+            <div class="bar w-2 bg-white rounded-full transition-all duration-300" style="height: 35%"></div>
+            <div class="bar w-2 bg-white rounded-full transition-all duration-300" style="height: 50%"></div>
+            <div class="bar w-2 bg-white rounded-full transition-all duration-300" style="height: 65%"></div>
+            <div class="bar w-2 bg-white rounded-full transition-all duration-300" style="height: 80%"></div>
+            <div class="bar w-2 bg-white rounded-full transition-all duration-300" style="height: 90%"></div>
+            <div class="bar w-2 bg-white rounded-full transition-all duration-300" style="height: 100%"></div>
+        </div>
+
+        <!-- Área del Slider -->
+        <div class="w-full relative px-4 md:px-6">
+            
+            <div class="relative w-full">
+                
+                <!-- CONTENEDOR DE MUESCAS (Ticks) -->
+                <div id="ticks-container" class="absolute top-[12px] left-4 right-4 h-2 pointer-events-none z-0">
+                    <!-- JS generará las líneas aquí -->
+                </div>
+
+                <!-- Input Range Principal -->
+                <input type="range" id="dynamic-slider" min="0" max="7" value="3" step="1" aria-label="Control de dinámica musical" class="block w-full">
+                
+                <!-- CONTENEDOR DE ETIQUETAS -->
+                <div id="labels-container" class="relative mx-4 h-10 mt-2 select-none">
+                    <!-- JS generará las etiquetas aquí -->
+                </div>
+            </div>
+
+        </div>
+        
+        <p class="text-white/50 text-xs md:text-sm mt-8">Desliza o pulsa en las letras para cambiar</p>
+
+    </main>
+
+    <script>
+        const dynamics = [
+            { symbol: "ppp", name: "Pianississimo", desc: "Extremadamente suave", color: "bg-indigo-900", hex: "#312e81", intensity: 10 },
+            { symbol: "pp", name: "Pianissimo", desc: "Muy suave", color: "bg-blue-700", hex: "#1d4ed8", intensity: 20 },
+            { symbol: "p", name: "Piano", desc: "Suave", color: "bg-cyan-600", hex: "#0891b2", intensity: 35 },
+            { symbol: "mp", name: "Mezzo-piano", desc: "Moderadamente suave", color: "bg-teal-500", hex: "#14b8a6", intensity: 50 },
+            { symbol: "mf", name: "Mezzo-forte", desc: "Moderadamente fuerte", color: "bg-yellow-500", hex: "#eab308", intensity: 65 },
+            { symbol: "f", name: "Forte", desc: "Fuerte", color: "bg-orange-500", hex: "#f97316", intensity: 80 },
+            { symbol: "ff", name: "Fortissimo", desc: "Muy fuerte", color: "bg-red-600", hex: "#dc2626", intensity: 90 },
+            { symbol: "fff", name: "Fortississimo", desc: "Extrema fuerza", color: "bg-rose-900", hex: "#881337", intensity: 100 }
+        ];
+
+        const slider = document.getElementById('dynamic-slider');
+        const symbolDisplay = document.getElementById('dynamic-symbol');
+        const nameDisplay = document.getElementById('dynamic-name');
+        const descDisplay = document.getElementById('dynamic-desc');
+        const appBg = document.getElementById('app-bg');
+        const visualCircle = document.getElementById('visual-circle');
+        const bars = document.querySelectorAll('.bar');
+        const ticksContainer = document.getElementById('ticks-container');
+        const labelsContainer = document.getElementById('labels-container');
+
+        function initSliderMarks() {
+            ticksContainer.innerHTML = '';
+            labelsContainer.innerHTML = '';
+            
+            const count = dynamics.length;
+
+            dynamics.forEach((dyn, index) => {
+                const percent = (index / (count - 1)) * 100;
+
+                // 1. Muesca (Tick)
+                const tick = document.createElement('div');
+                tick.className = 'absolute top-0 w-0.5 h-2 bg-white/50 rounded-full transform -translate-x-1/2';
+                tick.style.left = `${percent}%`;
+                ticksContainer.appendChild(tick);
+
+                // 2. Etiqueta (Label)
+                const label = document.createElement('div');
+                label.className = 'tick-label absolute top-0 text-white/50 text-xs md:text-sm font-mono transform -translate-x-1/2 p-2';
+                label.style.left = `${percent}%`;
+                label.textContent = dyn.symbol;
+                
+                label.onclick = () => {
+                    slider.value = index;
+                    updateUI(index);
+                };
+                
+                labelsContainer.appendChild(label);
+            });
+        }
+
+        function updateUI(index) {
+            const data = dynamics[index];
+
+            symbolDisplay.textContent = data.symbol;
+            nameDisplay.textContent = data.name;
+            descDisplay.textContent = data.desc;
+
+            appBg.className = `absolute inset-0 -z-10 transition-colors duration-500 ease-out ${data.color}`;
+            slider.style.color = data.hex;
+
+            // Etiquetas
+            const allLabels = labelsContainer.querySelectorAll('.tick-label');
+            allLabels.forEach((lbl, i) => {
+                lbl.className = 'tick-label absolute top-0 text-xs md:text-sm font-mono transform -translate-x-1/2 p-2 transition-all duration-200';
+                lbl.style.left = `${(i / (dynamics.length - 1)) * 100}%`;
+
+                if(i === index) {
+                    lbl.classList.add('text-white', 'font-bold', 'scale-125');
+                } else {
+                    lbl.classList.add('text-white/50');
+                }
+            });
+
+            // Escala del símbolo (Ajustada para ser menos agresiva)
+            // Antes iba de 0.8 a 1.5. Ahora de 0.9 a 1.3 para evitar saltos enormes.
+            let scale = 0.9 + (index * 0.05); 
+            symbolDisplay.style.transform = `scale(${scale})`;
+            
+            // Eliminada la lógica de animación de pulso
+
+            // Fondo visual
+            let circleSize = 10 + (index * 5);
+            visualCircle.style.width = `${circleSize}rem`;
+            visualCircle.style.height = `${circleSize}rem`;
+            visualCircle.style.opacity = 0.1 + (index * 0.05);
+
+            // Barras tipo ecualizador
+            bars.forEach((bar, i) => {
+                const threshold = (i + 1) * (100 / bars.length);
+                if (data.intensity >= threshold - 10) {
+                    bar.style.height = `${Math.min(100, 20 + Math.random() * 80)}%`;
+                    bar.style.opacity = '1';
+                } else {
+                    bar.style.height = '10%';
+                    bar.style.opacity = '0.3';
+                }
+            });
+        }
+
+        slider.addEventListener('input', (e) => {
+            updateUI(parseInt(e.target.value));
+        });
+
+        initSliderMarks();
+        updateUI(parseInt(slider.value));
+    </script>
+</body>
+</html>
